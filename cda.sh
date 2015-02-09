@@ -87,95 +87,92 @@ vhost() {
 	chown www-data:www-data /var/log/apache2/access.$VHOST.log
 	
 	#Create the domain conf file.
-	echo "<VirtualHost *:80>" >> $PVHOST.conf
-	echo "	ServerName $VHOST" >> $PVHOST.conf
-	echo "	ServerAlias www.$VHOST" >> $PVHOST.conf
-	echo "	DocumentRoot $VHDIR/public" >> $PVHOST.conf
-	echo "	ErrorLog ${APACHE_LOG_DIR}/error.$VHOST.log" >> $PVHOST.conf
-	echo "	TransferLog ${APACHE_LOG_DIR}/access.$VHOST.log" >> $PVHOST.conf
-	echo "</VirtualHost>" >> $PVHOST.conf
-	echo >> $PVHOST.conf
-	echo "KeepAlive On" >> $PVHOST.conf
-	echo "MaxKeepAliveRequests 100" >> $PVHOST.conf
-	echo "KeepAliveTimeout 60" >> $PVHOST.conf
-	echo >> $PVHOST.conf
-	echo "<Directory $VHDIR/public>" >> $PVHOST.conf
-	echo "	Options FollowSymLinks" >> $PVHOST.conf
-	echo "	AllowOverride All" >> $PVHOST.conf
-	echo "</Directory>" >> $PVHOST.conf
-	echo >> $PVHOST.conf
-	echo "<IfModule mod_ssl.c>" >> $PVHOST.conf
-	echo "	<VirtualHost *:443>" >> $PVHOST.conf
-	echo "		ServerName $VHOST" >> $PVHOST.conf
-	echo "		ServerAlias www.$VHOST" >> $PVHOST.conf
-	echo "		DocumentRoot $VHDIR/public" >> $PVHOST.conf
-	echo "		ErrorLog ${APACHE_LOG_DIR}/error.$VHOST.log" >> $PVHOST.conf
-	echo "		TransferLog ${APACHE_LOG_DIR}/access.$VHOST.log" >> $PVHOST.conf
-	echo "		SSLEngine On" >> $PVHOST.conf
-	echo "		SSLCertificateFile $VHDIR/private/ssl/.crt" >> $PVHOST.conf
-	echo "		SSLCertificateFile $VHDIR/private/ssl/.key" >> $PVHOST.conf
-	echo "		<FilesMatch "\.(cgi|shtml|phtml|php)$">" >> $PVHOST.conf
-	echo "			SSLOptions +StdEnvVars" >> $PVHOST.conf
-	echo "		</FilesMatch>" >> $PVHOST.conf
-	echo "		<Directory /usr/lib/cgi-bin>" >> $PVHOST.conf
-	echo "			 SSLOptions +StdEnvVars" >> $PVHOST.conf
-	echo "		</Directory>" >> $PVHOST.conf
-	echo "		BrowserMatch "MSIE [2-6]" \" >> $PVHOST.conf
-	echo "			nokeepalive ssl-unclean-shutdown \" >> $PVHOST.conf
-	echo "		 	downgrade-1.0 force-response-1.0" >> $PVHOST.conf
-	echo "		BrowserMatch "MSIE [17-9]" ssl-unclean-shutdown" >> $PVHOST.conf
-	echo "	</VirtualHost>" >> $PVHOST.conf
+	echo "
+<VirtualHost *:80>
+	ServerName $VHOST
+	ServerAlias www.$VHOST
+	DocumentRoot $VHDIR/public
+	ErrorLog ${APACHE_LOG_DIR}/error.$VHOST.log
+	TransferLog ${APACHE_LOG_DIR}/access.$VHOST.log
+</VirtualHost>
+
+KeepAlive On
+MaxKeepAliveRequests 100
+KeepAliveTimeout 60
+
+<Directory $VHDIR/public>
+	Options FollowSymLinks
+	AllowOverride All
+</Directory>
+
+<IfModule mod_ssl.c>
+	<VirtualHost *:443>
+		ServerName $VHOST
+		ServerAlias www.$VHOST
+		DocumentRoot $VHDIR/public
+		ErrorLog ${APACHE_LOG_DIR}/error.$VHOST.log
+		TransferLog ${APACHE_LOG_DIR}/access.$VHOST.log
+		SSLEngine On
+		SSLCertificateFile $VHDIR/private/ssl/.crt
+		SSLCertificateFile $VHDIR/private/ssl/.key
+		<FilesMatch \"\.(cgi|shtml|phtml|php)$\">
+			SSLOptions +StdEnvVars
+		</FilesMatch>
+		<Directory /usr/lib/cgi-bin>
+			 SSLOptions +StdEnvVars
+		</Directory>
+		BrowserMatch \"MSIE [2-6]\" \
+			nokeepalive ssl-unclean-shutdown \
+		 	downgrade-1.0 force-response-1.0
+		BrowserMatch \"MSIE [17-9]\" ssl-unclean-shutdown
+	</VirtualHost>
+</IfModule>
+
+Include /etc/apache2/vhosts/*.$VHOST.conf" >> $PVHOST.conf
 	
 	#Create the mail subdomain conf file.
-	echo "<VirtualHost *:80>" >> $PVMAIL.conf
-	echo "	ServerName mail.$VHOST" >> $PVMAIL.conf
-	echo "	ServerAlias www.mail.$VHOST" >> $PVMAIL.conf
-	echo "	DocumentRoot /usr/share/squirrelmail" >> $PVMAIL.conf
-	echo "	ErrorLog ${APACHE_LOG_DIR}/error.mail.$VHOST.log" >> $PVMAIL.conf
-	echo "	TransferLog ${APACHE_LOG_DIR}/access.mail.$VHOST.log" >> $PVMAIL.conf
-	echo "</VirtualHost>" >> $PVMAIL.conf
-	echo >> $PVMAIL.conf
-	echo "KeepAlive On" >> $PVMAIL.conf
-	echo "MaxKeepAliveRequests 100" >> $PVMAIL.conf
-	echo "KeepAliveTimeout 60" >> $PVMAIL.conf
-	echo >> $PVMAIL.conf
-	echo "<IfModule mod_ssl.c>" >> $PVMAIL.conf
-	echo "	<VirtualHost *:443>" >> $PVMAIL.conf
-	echo "		ServerName mail.$VHOST" >> $PVMAIL.conf
-	echo "		ServerAlias www.mail.$VHOST" >> $PVMAIL.conf
-	echo "		DocumentRoot /usr/share/squirrelmail" >> $PVMAIL.conf
-	echo "		ErrorLog ${APACHE_LOG_DIR}/error.mail.$VHOST.log" >> $PVMAIL.conf
-	echo "		TransferLog ${APACHE_LOG_DIR}/access.mail.$VHOST.log" >> $PVMAIL.conf
-	echo "		SSLEngine On" >> $PVMAIL.conf
-	echo "		SSLCertificateFile /var/www/mail/.crt" >> $PVMAIL.conf
-	echo "		SSLCertificateFile /Var/www/mail/.key" >> $PVMAIL.conf
-	echo "		<FilesMatch "\.(cgi|shtml|phtml|php)$">" >> $PVMAIL.conf
-	echo "			SSLOptions +StdEnvVars" >> $PVMAIL.conf
-	echo "		</FilesMatch>" >> $PVMAIL.conf
-	echo "		<Directory /usr/lib/cgi-bin>" >> $PVMAIL.conf
-	echo "			 SSLOptions +StdEnvVars" >> $PVMAIL.conf
-	echo "		</Directory>" >> $PVMAIL.conf
-	echo "		BrowserMatch "MSIE [2-6]" \" >> $PVMAIL.conf
-	echo "			nokeepalive ssl-unclean-shutdown \" >> $PVMAIL.conf
-	echo "		 	downgrade-1.0 force-response-1.0" >> $PVMAIL.conf
-	echo "		BrowserMatch "MSIE [17-9]" ssl-unclean-shutdown" >> $PVMAIL.conf
-	echo "	</VirtualHost>" >> $PVMAIL.conf
-
+	echo "
+<VirtualHost *:80>
+	ServerName mail.$VHOST
+	ServerAlias www.mail.$VHOST
+	DocumentRoot /usr/share/squirrelmail
+	ErrorLog ${APACHE_LOG_DIR}/error.mail.$VHOST.log
+	TransferLog ${APACHE_LOG_DIR}/access.mail.$VHOST.log
+</VirtualHost>
+	echo
+KeepAlive On
+MaxKeepAliveRequests 100
+KeepAliveTimeout 60
+	echo
+<IfModule mod_ssl.c>
+	<VirtualHost *:443>
+		ServerName mail.$VHOST
+		ServerAlias www.mail.$VHOST
+		DocumentRoot /usr/share/squirrelmail
+		ErrorLog ${APACHE_LOG_DIR}/error.mail.$VHOST.log
+		TransferLog ${APACHE_LOG_DIR}/access.mail.$VHOST.log
+		SSLEngine On
+		SSLCertificateFile /var/www/mail/.crt
+		SSLCertificateFile /Var/www/mail/.key
+		<FilesMatch \"\.(cgi|shtml|phtml|php)$\">
+			SSLOptions +StdEnvVars
+		</FilesMatch>
+		<Directory /usr/lib/cgi-bin>
+			 SSLOptions +StdEnvVars
+		</Directory>"
+		BrowserMatch "MSIE [2-6]" \
+			nokeepalive ssl-unclean-shutdown \
+		 	downgrade-1.0 force-response-1.0
+		BrowserMatch \"MSIE [17-9]\" ssl-unclean-shutdown
+	</VirtualHost>
+</IfModule>" >> $PVMAIL.conf
 	
-	echo >> $PVHOST.conf
-	echo "Include /etc/apache2/vhosts/*.$VHOST.conf" >> $PVHOST.conf
-	
-	ln -s /usr/share/phpmyadmin /home/$USER/html/$VHOST/phpmyadmin
-	echo "<VirtualHost *:80>" > $PVMAIL.conf
-	echo "	ServerName www.mail.$VHOST" >> $PVMAIL.conf
-	echo "	ServerAlias mail.$VHOST" >> $PVMAIL.conf
-	echo "	DocumentRoot /usr/share/squirrelmail" >> $PVMAIL.conf
-	echo "	ErrorLog /var/log/apache2/$USER/mail.$VHOST-error.log" >> $PVMAIL.conf
-	echo "	TransferLog /var/log/apache2/$USER/mail.$VHOST-access.log" >> $PVMAIL.conf
-	echo "</VirtualHost>" >> $PVMAIL.conf 
-	mkdir /home/$USER/html/mail.$VHOST
+	#Enable the site.
 	a2ensite $VHOST
 	a2ensite mail.$VHOST
+	
+	#Reload apache.
+	service apache2 reload
 }
 
 
