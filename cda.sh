@@ -4,24 +4,22 @@
 # This script creates, deletes or appends based upon input.
 #
 # This script supports:
-#	* Linux Accounts - COMPLETE - CDA
-#	* Webalizer - COMPLETE
-#	* Apache Virtual Hosts - COMPLETE :: 2.4 w/ Self-Signed Certificate
-#	* domain.tld - COMPLETE - CD
-#	* sub.domain.tld - COMPLETE - CD
-#	* Exim4 - COMPLETE
-#	* IMAP Port 465 TLS - COMPLETE
-#	* SMTP mail.domain.tld - COMPLETE
-#	* Squirrelmail - COMPLETE
-#	* Forwarding - COMPLETE 
-#	* postmaster@domain.tld - COMPLETE - C
-#		-forwarded to-
-#	* administrator@domain.tld - COMPLETE - C
-#	* username@domain.tld - COMPLETE - C
-#	* MySQL/PhpMyAdmin - COMPLETE
-#	* username.read - COMPLETE
-#	* username.write - COMPLETE
-#	* ????
+#	* Linux Accounts - CDA
+#	* Webalizer - C
+#	* Apache Virtual Hosts - C
+#	* domain.tld - CD
+#	* sub.domain.tld - CD
+#	* Exim4 - C
+#	* IMAP Port 465 TLS - C
+#	* SMTP mail.domain.tld - C
+#	* Squirrelmail - C
+#	* Forwarding - C 
+#	* postmaster@domain.tld fwd - C
+#	* webmaster@domain.tld fwd
+#	* administrator@domain.tld - C
+#	* username@domain.tld - C
+#	* MySQL - C
+#	* username - C
 
 # Declare colors
 blue='\e[0;34m'
@@ -33,30 +31,31 @@ green='\e[0;32m'
 reset='\e[0;37m'
 
 # Version
-VERSION='0.1.7 Alpha'
+VERSION='0.2.1 Alpha'
 
 validation() { 
 	echo
 	echo "Checking for basic dependencies..."
 	echo -e $green
- 	if ! type -P apache2 ; then
+	if [[ $EUID -ne 0 ]]; then
+		echo -e $red "ERROR:" $reset "You must have elevated permissions to use this script!"
+ 	elif [ ! type -P apache2 ]; then
 		echo -e $red "ERROR:" $reset "Apache2 must be installed!"
 		exit;
-	elif ! type -p php5 ; then
-                 echo -e $red "ERROR:" $reset "PHP5 must be installed!"
-                 exit;
-	elif ! type -p mysql ; then
-                 echo -e $red "ERROR:" $reset "MySQL must be installed!"
-                 exit;
-	elif ! type -p exim4 ; then
-                 echo -e $red "ERROR:" $reset "EXIM4 must be installed!"
-                 exit;
-	elif ! type -p webalizer ; then
-                 echo -e $red "ERROR:" $reset "webalizer must be installed!"
-                 exit;
-	else
-		echo
-		echo -e $red "WARNING:" $reset "SquirrelMail installation cannot be verified!"
+	elif [ ! type -p php5 ]; then
+         echo -e $red "ERROR:" $reset "PHP5 must be installed!"
+         exit;
+	elif [ ! type -p mysql ]; then
+         echo -e $red "ERROR:" $reset "MySQL must be installed!"
+         exit;
+	elif [ ! type -p exim4 ]; then
+         echo -e $red "ERROR:" $reset "EXIM4 must be installed!"
+         exit;
+	elif [ ! type -p webalizer ]; then
+         echo -e $red "ERROR:" $reset "webalizer must be installed!"
+         exit;
+	elif [ ! -d /usr/share/squirrelmail ]; then
+		echo -e $red "ERROR:" $reset "SquirrelMail installation cannot be verified!"
 		echo
 	fi
 }
@@ -76,14 +75,18 @@ vhost() {
 	mkdir $VHDIR/public
 	mkdir $VHDIR/private
 	mkdir $VHDIR/ssl
-	mkdir $VHDIR/webalizer
+	mkdir $VHDIR/public/webalizer
+	mkdir $VHDIR/private/webalizer
+	
+	#Set permissions.
+	chown -R $USER:www-data $VHDIR
 	
 	#Create the error log.
-	touch /var/log/apache2/$VHOST-error.log
+	touch /var/log/apache2/error.$VHOST.log
 	chown www-data:www-data /var/log/apache2/error.$VHOST.log
 	
 	#Create the access log.
-	touch /var/log/apache2/$VHOST-access.log
+	touch /var/log/apache2/access.$VHOST.log
 	chown www-data:www-data /var/log/apache2/access.$VHOST.log
 	
 	#Create the domain conf file.
@@ -128,7 +131,7 @@ KeepAliveTimeout 60
 	</VirtualHost>
 </IfModule>
 
-Include /etc/apache2/vhosts/*.$VHOST.conf" >> $PVHOST.conf
+Include /etc/apache2/vhosts/*.$VHOST.conf" > $PVHOST.conf
 	
 	#Create the mail subdomain conf file.
 	echo "
@@ -165,7 +168,7 @@ KeepAliveTimeout 60
 		 	downgrade-1.0 force-response-1.0
 		BrowserMatch \"MSIE [17-9]\" ssl-unclean-shutdown
 	</VirtualHost>
-</IfModule>" >> $PVMAIL.conf
+</IfModule>" > $PVMAIL.conf
 	
 	#Enable the site.
 	a2ensite $VHOST
@@ -177,62 +180,154 @@ KeepAliveTimeout 60
 
 
 subvhost() {
+	#Declare variables.
 	USER=$1
 	DOMAIN=$2
 	SUB=$3
 	VHOST="$SUB.$DOMAIN"
-	PVHOST="/etc/apache2/sites-avilabile/$VHOST"
-	echo "<VirtualHost *:80>" > $PVHOST.conf
-	echo "  ServerName www.$VHOST" >> $PVHOST.conf
-	echo "  ServerAlias $VHOST" >> $PVHOST.conf
-	mkdir /home/$USER/html/$VHOST/public
-	echo "  DocumentRoot /home/$USER/html/$VHOST" >> $PVHOST.conf
-	echo "  ErrorLog /var/log/apache2/$USER/$VHOST-error.log" >> $PVHOST.conf
-	echo "  TransferLog /var/log/apache2/$USER/$VHOST-access.log" >> $PVHOST.conf
-	echo "</VirtualHost>" >> $PVHOST.conf
+	
+	#Set the directories. 
+	PVHOST="/etc/apache2/sites-available/$VHOST"
+	VHDIR="/var/www/$VHOST"
+	
+	#Set permissions.
+	chown -R $USER:www-data $VHDIR
+	
+	#Create the directories.
+	mkdir $VHDIR
+	mkdir $VHDIR/public
+	mkdir $VHDIR/private
+	mkdir $VHDIR/ssl
+	mkdir $VHDIR/public/webalizer
+	mkdir $VHDIR/private/webalizer
+	
+	#Create the error log.
+	touch /var/log/apache2/error.$VHOST.log
+	chown www-data:www-data /var/log/apache2/error.$VHOST.log
+	
+	#Create the access log.
+	touch /var/log/apache2/access.$VHOST.log
+	chown www-data:www-data /var/log/apache2/access.$VHOST.log
+	
+	#Create the domain conf file.
+	echo "
+<VirtualHost *:80>
+	ServerName $VHOST
+	ServerAlias www.$VHOST
+	DocumentRoot $VHDIR/public
+	ErrorLog ${APACHE_LOG_DIR}/error.$VHOST.log
+	TransferLog ${APACHE_LOG_DIR}/access.$VHOST.log
+</VirtualHost>
+
+KeepAlive On
+MaxKeepAliveRequests 100
+KeepAliveTimeout 60
+
+<Directory $VHDIR/public>
+	Options FollowSymLinks
+	AllowOverride All
+</Directory>
+
+<IfModule mod_ssl.c>
+	<VirtualHost *:443>
+		ServerName $VHOST
+		ServerAlias www.$VHOST
+		DocumentRoot $VHDIR/public
+		ErrorLog ${APACHE_LOG_DIR}/error.$VHOST.log
+		TransferLog ${APACHE_LOG_DIR}/access.$VHOST.log
+		SSLEngine On
+		SSLCertificateFile $VHDIR/private/ssl/.crt
+		SSLCertificateFile $VHDIR/private/ssl/.key
+		<FilesMatch \"\.(cgi|shtml|phtml|php)$\">
+			SSLOptions +StdEnvVars
+		</FilesMatch>
+		<Directory /usr/lib/cgi-bin>
+			 SSLOptions +StdEnvVars
+		</Directory>
+		BrowserMatch \"MSIE [2-6]\" \
+			nokeepalive ssl-unclean-shutdown \
+		 	downgrade-1.0 force-response-1.0
+		BrowserMatch \"MSIE [17-9]\" ssl-unclean-shutdown
+	</VirtualHost>
+</IfModule>" > $PVHOST.conf
+	
+	#Enable the site.
 	a2ensite $VHOST
+	
+	#Reload apache.
+	service apache2 reload
 }
 
 webalizer() {
+	#Declare variables.
 	USER=$1
 	VHOST=$2
 	PVHOST="/etc/webalizer/$VHOST"
-	echo "LogFile /var/log/apache2/$USER/$VHOST-access.log" > $PVHOST.conf
-	echo "OutputDir /home/$USER/html/$VHOST/webalizer" >> $PVHOST.conf
-	echo "HostName www.$VHOST" >> $PVHOST.conf
-	echo "HideReferrer www.$VHOST" >> $PVHOST.conf
+	
+	#Output configuration file.
+	echo "
+	Logfile /var/log/apache2/access.$VHOST.log
+	OutputDir /var/www/$VHOST/public/webalizer
+	HistoryName /var/www/$VHOST/private/webalizer/$VHOST.hist
+	IncrementalName /var/www/$VHOST/private/webalizer/$VHOST.current
+	HostName $VHOST" > $PVHOST.conf
 }
 
 mail() {
+	#Declare variables.
 	USER=$1
 	MAILNAME=$2
 	DOMAIN=$3
 	PASS=$4
-	echo "postmaster:	administrator@$DOMAIN" > /etc/exim4/virtual/$DOMAIN
-	echo "administrator:	$USER@localhost" >> /etc/exim4/virtual/$DOMAIN
-	echo "$MAILNAME:	$USER@localhost" >> /etc/exim4/virtual/$DOMAIN
+	
+	#Output configuration file.
+	echo "
+	postmaster:		administrator@$DOMAIN
+	webmaster:		administrator@$DOMAIN
+	administrator:	$USER@localhost
+	$MAILNAME:		$USER@localhost" >> /etc/exim4/virtual/$DOMAIN
+	
+	#Set a new mailname.
 	echo "$USER@$DOMAIN" >> /etc/mailname
+	
+	#Set password.
 	if [[ "$PASS" != "" ]]; then 
 		htpasswd -nb $USER $PASS >> /etc/exim4/passwd
 	fi
+	
+	#Update exim.
 	update-exim4.conf			
 }
 
 createMail() {
+	#Declare variables.
 	USER=$1
 	EMAIL=$2
 	DOMAIN=$3
+	
+	#Add the email to the vhost. 
 	echo "$EMAIL:	$USER@localhost" >> /etc/exim4/virtual/$DOMAIN
+	
+	#Set a new mailname.
 	echo "$USER@$DOMAIN" >> /etc/mailname
+	
+	#Update exim.
 	update-exim4.conf
 }
 
 mailForward() {
+	#Declare variables.
 	USER=$1
 	DOMAIN=$2
 	FORWARD=$3
+	
+	#Add new forwarding address.
 	echo "$USER:	$FORWARD" >> /etc/exim4/virtual/$DOMAIN
+	
+	#Add the mailname. 
 	echo "$USER@$DOMAIN" >> /etc/mailname
+	
+	#Update exim.
 	update-exim4.conf
 }
 
@@ -262,9 +357,9 @@ echo -e $reset
 if [ "$1" == "" ]; then
 	echo "Please enter the following code to begin:"
 	echo
-	echo -e $lightblue "create" $reset "			Create a New User"
+	echo -e $lightblue "create" $reset "			Create a New User with Domain"
 	echo -e $lightblue "delete" $reset "			Delete an Existing User"
-	echo -e $lightblue "append" $reset "			Append an Existing User"
+	echo -e $lightblue "append" $reset "			Append/Modify an Existing User"
 	read -p "Code: " CODE
 else 
 	echo -e $red "ERROR: " $reset "You must select a code!"
@@ -278,7 +373,7 @@ case $CODE in
 		echo "Please input the following information:"
 		echo 	
 		read -p "Username: " USERNAME 
-		read -p "Domain/Host: " DOMAIN
+		read -p "Domain/Hostname: " DOMAIN
 		read -p "Personal Email Handle: " EMAIL
 		stty -echo
 		read -p "Universal Email Password: " PASSWD
@@ -286,9 +381,9 @@ case $CODE in
 		if [[ "$USERNAME" != "" && "$DOMAIN" != "" && "$EMAIL" != "" && "$PASSWD" != "" ]]; then
 			echo "Creating: $USERNAME at $DOMAIN"
 			adduser --force-badname $USERNAME 
+			usermod -a -G www-data $USERNAME
 			phpsql $USERNAME
 			vhost $USERNAME $DOMAIN
-			ln -s /var/log/apache2/$USER /home/$USER/log
 			webalizer $USERNAME $DOMAIN
 			mail $USERNAME $EMAIL $DOMAIN $PASSWD
 		else
@@ -314,7 +409,7 @@ case $CODE in
 	append)
 		echo "Please input the following code:"
 		echo
-		echo -e $lightblue "domain" $reset "			Modify Domains"
+		echo -e $lightblue "domain" $reset "		Modify Domains"
 		echo -e $lightblue "email" $reset "			Modify Email"
 		read -p "Code: " APPEND
 		case $APPEND in
@@ -331,7 +426,7 @@ case $CODE in
 						read -p "Username: " USER
 						read -p "Domain: " DOMAIN
 						read -p "Personal Email Handle: " EMAIL		
-						if [[ "$USER" != "" && "$DOMAIN" != "" && "$EMAIL" != ""  ]]; then
+						if [[ "$USER" != "" && "$DOMAIN" != "" && "$EMAIL" != "" ]]; then
 							PASSWD=""
 							echo "Appending $DOMAIN to $USER"
 							vhost $USER $DOMAIN
@@ -364,8 +459,8 @@ case $CODE in
 						read -p "Domain: " DOMAIN
 						if [ "$DOMAIN" != "" ]; then
 							echo "Deleting: $DOMAIN"
-							rm /var/log/apache2/$USER/$DOMAIN-error.log
-							rm /var/log/apache2/$USER/$DOMAIN-access.log
+							rm /var/log/apache2/error.$DOMAIN.log
+							rm /var/log/apache2/access.$DOMAIN.log
 							rm /etc/apache2/vhosts/$DOMAIN.conf
 							rm /etc/apache2/vhosts/mail.$DOMAIN.conf
 							rm /etc/webalizer/$DOMAIN.conf
@@ -419,4 +514,3 @@ esac
 apache2ctl -k graceful
 /etc/init.d/exim4 restart
 cd ~
-./webalizer.sh	
