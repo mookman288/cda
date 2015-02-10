@@ -39,22 +39,22 @@ validation() {
 	echo -e $green
 	if [[ $EUID -ne 0 ]]; then
 		echo -e $red "ERROR:" $reset "You must have elevated permissions to use this script!"
- 	elif [ ! type -P apache2 ]; then
+ 	elif [[ ! type -P apache2 ]]; then
 		echo -e $red "ERROR:" $reset "Apache2 must be installed!"
 		exit;
-	elif [ ! type -p php5 ]; then
+	elif [[ ! type -p php5 ]]; then
          echo -e $red "ERROR:" $reset "PHP5 must be installed!"
          exit;
-	elif [ ! type -p mysql ]; then
+	elif [[ ! type -p mysql ]]; then
          echo -e $red "ERROR:" $reset "MySQL must be installed!"
          exit;
-	elif [ ! type -p exim4 ]; then
+	elif [[ ! type -p exim4 ]]; then
          echo -e $red "ERROR:" $reset "EXIM4 must be installed!"
          exit;
-	elif [ ! type -p webalizer ]; then
+	elif [[ ! type -p webalizer ]]; then
          echo -e $red "ERROR:" $reset "webalizer must be installed!"
          exit;
-	elif [ ! -d /usr/share/squirrelmail ]; then
+	elif [[ ! -d /usr/share/squirrelmail ]]; then
 		echo -e $red "ERROR:" $reset "SquirrelMail installation cannot be verified!"
 		echo
 	fi
@@ -163,7 +163,7 @@ KeepAliveTimeout 60
 		<Directory /usr/lib/cgi-bin>
 			 SSLOptions +StdEnvVars
 		</Directory>
-		BrowserMatch \"MSIE [2-6]\" \
+		BrowserMatch \"MSIE [2-6]" \
 			nokeepalive ssl-unclean-shutdown \
 		 	downgrade-1.0 force-response-1.0
 		BrowserMatch \"MSIE [17-9]\" ssl-unclean-shutdown
