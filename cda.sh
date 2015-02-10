@@ -39,19 +39,19 @@ validation() {
 	echo -e $green
 	if [[ $EUID -ne 0 ]]; then
 		echo -e $red "ERROR:" $reset "You must have elevated permissions to use this script!"
- 	elif [[ ! type -P apache2 ]]; then
+ 	elif [[ ! `type -P apache2` ]]; then
 		echo -e $red "ERROR:" $reset "Apache2 must be installed!"
 		exit;
-	elif [[ ! type -p php5 ]]; then
+	elif [[ ! `type -p php5` ]]; then
          echo -e $red "ERROR:" $reset "PHP5 must be installed!"
          exit;
-	elif [[ ! type -p mysql ]]; then
+	elif [[ ! `type -p mysql` ]]; then
          echo -e $red "ERROR:" $reset "MySQL must be installed!"
          exit;
-	elif [[ ! type -p exim4 ]]; then
+	elif [[ ! `type -p exim4` ]]; then
          echo -e $red "ERROR:" $reset "EXIM4 must be installed!"
          exit;
-	elif [[ ! type -p webalizer ]]; then
+	elif [[ ! `type -p webalizer` ]]; then
          echo -e $red "ERROR:" $reset "webalizer must be installed!"
          exit;
 	elif [[ ! -d /usr/share/squirrelmail ]]; then
